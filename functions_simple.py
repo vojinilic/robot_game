@@ -56,6 +56,27 @@ goal_positions = dict(zip(objects, positions[:len(objects)]))
 
 # same functions but different names for clarity - both human responses
 
+# it is a good idea to actually define a type for obj and pos
+# You are already using typing in main_test.py, so just adopt same practices here.
+# For example I don't know now what is obj and pos.
+# I would split this into 2 functions.
+# One for the instruction and one which encodes the feedback string.
+# Sample of the first one:
+# def get_instruction_parts(obj, pos):
+#     object_word = object_symbol_map[obj]
+#     row_word = row_codebook[pos[0]]
+#     col_word = col_codebook[pos[1]]
+#     return object_word, row_word, col_word
+#     or even better:
+#     return (object_word, row_word, col_word)
+# This way you can capture result value as a tuple, so single variable.
+# Then you can use the encode_instruction function to encode the instruction.
+# def encode_instruction(object_word, row_word, col_word):
+#     return f"{object_word} {row_word} {col_word}"
+# This way you can avoid the split in the observe function.
+# You can also use the get_instruction_parts function to get the instruction parts for the feedback.
+# def get_feedback_parts(obj, pos):
+#     return object_word, row_word, col_word
 def encode_instruction(obj, pos):
     """
     human instruction for an object to be placed at certain position, in the foreign language
@@ -63,6 +84,7 @@ def encode_instruction(obj, pos):
     object_word = object_symbol_map[obj]
     return f"{object_word} {row_codebook[pos[0]]} {col_codebook[pos[1]]}"
 
+# this seems a bit redundant, you can just use the encode_instruction function?
 def generate_feedback(obj, pos):
     """
     human feedback for an object to be placed at certain position, in the foreign language
@@ -84,6 +106,9 @@ class SymbolLearner:
         x: parameter which is the amount of increase in belief at every sight. half of it is used for forgetting.
         """
         row_label, col_label = position
+        # Feedback is already encoded as a string and now you are splitting it again?
+        # I have a better idea how you can generate the feedback_words.
+        # go to feedback function for details.
         feedback_words = feedback.split()
 
         row_word = feedback_words[1]
@@ -106,6 +131,7 @@ class SymbolLearner:
         score calculator that filters out occupied positions
         you can only calculate scores if you hear the instruction for a specific object.
         """
+        # same comment as above, you can just use the get_instruction_parts function to get the words and pass them to this function instead.
         words = instruction.split()
         scores = []
 

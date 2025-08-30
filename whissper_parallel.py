@@ -61,8 +61,18 @@ def run_hint_listener(
 
     task_queue = queue.Queue()
 
+    # it is a bit of an anti-pattern to have this long functions defined within a thread function.
+    # I would move definitions of these functions outside of the thread functions.
+    # This way the actual thread code is a lot easier to read and understand.
+    # maybe you can even reuse them in some places?
     def classify_with_prompt(system_prompt, transcript, timeout=50):
         def llm_call():
+            # I really dislike global definitions. They are hard to debug and maintain.
+            # it is a bit better to only have them reset in case of an error in the thread function.
+            # then you just pass them here as arguments.
+            # if there is rate limit error, log it here, but rerun a value to indicate that his happened.
+            # then in thread function you can check for this value and reset the client and current_key_index if needed.
+            # or you can just raise existing RateLimitError exception further up and handle it in the thread function.
             global client, current_key_index
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -130,6 +140,16 @@ def run_hint_listener(
             },
             condition_on_previous_text=True
         )
+        # avoid prints use python logging module instead.
+        # https://docs.python.org/3/library/logging.html
+        # it is a lot easier to debug and maintain.
+        # you can also use different log levels to distinguish between different types of messages.
+        # for example:
+        # logger.debug(f"[WHISPER] Forced language: {lang}")
+        # logger.info(f"[WHISPER] Forced language: {lang}")
+        # logger.warning(f"[WHISPER] Forced language: {lang}")
+        # logger.error(f"[WHISPER] Forced language: {lang}")
+        # it's a bit harder to setup if you want file and console logging in the beginning but you can do it and you will thank yourself later.
         print(f"[WHISPER] Forced language: {lang}")
 
 
@@ -164,6 +184,9 @@ def run_hint_listener(
 
     def classification_worker():
         while True:
+            # you should check the return value of wait to see if it is set or not.
+            # If not I guess that means no speech detected?
+            # Maybe you can wait forever for speech detected, so call it without timeout?
             run_event.wait(timeout=0.5)
             try:
                 audio_bytes = task_queue.get(timeout=50)
@@ -196,6 +219,8 @@ def run_hint_listener(
         elif recording:
             recording = False
             speech_detected.clear()
+            # Given how you are checking speech_detected event and how you are reading task queue
+            # I think you need to fill task queue before you set the event.
             task_queue.put(b"".join(buffer))
             buffer.clear()
 
