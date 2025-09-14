@@ -213,11 +213,13 @@ def run_hint_listener(
         if vad.is_speech(pcm, SAMPLE_RATE):
             if not recording:
                 recording = True
+                # I don't think you need to set speech_detected here.
                 speech_detected.set()
                 buffer.clear()
             buffer.append(pcm)
         elif recording:
             recording = False
+            # give the comment I added in main.py, you should call speech_detected.set() here.
             speech_detected.clear()
             # Given how you are checking speech_detected event and how you are reading task queue
             # I think you need to fill task queue before you set the event.

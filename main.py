@@ -43,6 +43,11 @@ trial_lock = asyncio.Lock()
 
 
 async def broadcast_event(event_type, data):
+    # this is also an anti pattern.
+    # you should just add data to queue.
+    # if you need to represent data as string in some place, in those places you can just do json.dumps(data).
+    # also if you are not sure how to deal with data, since it is a dict, take a look at
+    # https://www.geeksforgeeks.org/python/deep-copy-of-a-dictionary-in-python/
     message = f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
     for queue in clients:
         await queue.put(message)
@@ -50,6 +55,7 @@ async def broadcast_event(event_type, data):
 Pepper4 = False # CHANGE TO FALSE FOR PEPPER 3 (add this to GUI for final version)
 
 manager = Manager()
+# I believe these 2 should be manager.list()
 # this is to communicate the hint with whisper back and forth. also makes sure there is only one hint per go
 hint_slot        = manager.Namespace(); hint_slot.value        = None
 # structural utterance communication
@@ -110,7 +116,7 @@ def startup_listener():
        # daemon=True
    # )
     #listener_proc.start()
-
+    # aren't you missing argument for run_event?
     listener_thread = Thread(
         target=run_hint_listener,
         args=(
@@ -185,6 +191,10 @@ async def run_single_trial_generator(
             )
             sampled_objects = random.sample(pool, sample_size)
 
+            # this is a bit counter intuitive, you are effectively waiting for speech_detected to be cleared.
+            # To me that reads I am waiting for speech not be detected?
+            # Does it make more sense to wait while there is no speech detected, meaning this is not set.
+            # But you will need to change in whissper_parallel.py to set speech_detected when there is actually speech detected.
             while speech_detected.is_set():
                 await asyncio.sleep(0.1)
                 print("Waiting: speech detected")
@@ -510,6 +520,10 @@ first_client_connected = False
 @app.get("/stream_trial")
 async def stream_trial(request: Request):
     queue = asyncio.Queue()
+    # wait I don't get this.
+    # why do you need to add the queue to the clients list and remove it every time somebody calls /stream_trial?
+    # Can't you create a set number of queues on the app startup and then just use them?
+    # I think you can do that with a global variable.
     clients.append(queue)
 
     async def event_stream():
